@@ -1,0 +1,27 @@
+# Task ECS
+- name: 动态解析 DNS
+  hosts: localhost
+  tasks:
+    - name: 解析DNS
+      ansible.builtin.shell:
+        cmd: >
+           aliyun alidns AddDomainRecord \
+             --region cn-hangzhou \
+             --Type A \
+             --DomainName 'shuaipeng.ren' \
+             --RR jenkins \
+             --Value '118.31.76.44'
+      changed_when: false
+      register: shell_result
+
+    - name: 提取JSON 信息
+      ansible.builtin.set_fact:
+        parsed_data: "{{ shell_result.stdout }}"
+
+    - name: 提取 ID
+      ansible.builtin.set_fact:
+        record_id: "{{ parsed_data.RecordId }}"
+
+    - name: 打印 ID
+      ansible.builtin.debug:
+        var: record_id

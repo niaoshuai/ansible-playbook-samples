@@ -1,0 +1,24 @@
+[mysqld]
+user = ecs-user
+basedir = /home/ecs-user/{{ mysql_home_name }}
+datadir = /home/ecs-user/datas/mysql
+port = 3306
+socket = /tmp/mysqlx.sock
+pid-file = /home/ecs-user/datas/mysql/mysql.pid
+log-error = /home/ecs-user/datas/mysql/mysql-err.log
+
+# sql_mode = "STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER"
+
+max_connections = 2000
+character-set-server = utf8mb4
+default-storage-engine = INNODB
+
+default-time-zone = '+8:00'
+
+[mysql]
+# 客户端默认字符集
+default-character-set = utf8mb4
+
+[client]
+port = 3306
+socket = /tmp/mysqlx.sock

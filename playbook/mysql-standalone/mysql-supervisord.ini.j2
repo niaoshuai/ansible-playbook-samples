@@ -1,0 +1,17 @@
+[program:MySQL]
+directory=/home/ecs-user/{{ mysql_home_name }}                                                  ;
+command=/home/ecs-user/{{ mysql_home_name }}/bin/mysqld --defaults-file=/home/ecs-user/{{ mysql_home_name }}/etc/my.cnf ;
+stopsignal=KILL                                                             ;
+stderr_logfile=/home/ecs-user/logs/supervisor/supervisor-mysql.err                                ;
+stdout_logfile=/home/ecs-user/logs/supervisor/supervisor-mysql.out                                ;
+stdout_logfile_maxbytes=10MB                                                ;
+stdout_logfile_backups=10                                                   ;
+user=ecs-user                                          ;
+umask=022                                                                   ;
+autostart=true                                                              ;
+autorestart=true                                                            ;
+startsecs=10                                                                ;
+startretries=3                                                              ;
+stopasgroup=true                                                            ;
+killasgroup=true                                                            ;
+redirect_stderr=false                                                       ;

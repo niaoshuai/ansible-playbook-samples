@@ -1,0 +1,56 @@
+- name: 安装 GraalVM APP
+  hosts: deploy
+  become: true
+  vars:
+    app_version: 0.0.1
+    app_install_user: ecs-user
+    app_home: "/home/{{ app_install_user }}"
+    app_name: "web-api"
+    app_download_url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/{{ app_name }}"
+  tasks:
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "{{ app_download_url }}"
+        validate_certs: false
+        dest: "/home/{{ app_install_user }}/{{ app_name }}"
+        mode: "0644"
+        force: true
+        owner: "{{ app_install_user }}"
+        group: "{{ app_install_user }}"
+      tags: download
+
+    - name: 复制启动文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/etc/supervisord.d/conf.d/{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - app-supervisord.ini
+
+    - name: 更新启动文件
+      ansible.builtin.shell:
+        chdir: /tmp
+        cmd: /usr/bin/supervisorctl -c /etc/supervisord.d/supervisor.conf update
+      changed_when: false
+
+    # - name: 重启0
+    #   ansible.builtin.command:
+    #     chdir: /tmp
+    #     cmd: "/usr/bin/supervisorctl -u admin -p 123456 stop app"
+    #   changed_when: false
+
+    # - name: 重启1
+    #   ansible.builtin.command:
+    #     chdir: /tmp
+    #     cmd: "/usr/bin/supervisorctl -u admin -p 123456 start app"
+    #   changed_when: false
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: 8080
+        state: started
+        delay: 5
+        timeout: 120
+    # 密码在这里 cat /home/ecs-user/.jenkins/secrets/initialAdminPassword

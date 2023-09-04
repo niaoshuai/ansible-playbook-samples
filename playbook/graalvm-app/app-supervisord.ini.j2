@@ -1,0 +1,17 @@
+[program:app]
+directory=/home/{{ app_install_user }}          ;
+command=/home/{{ app_install_user }}/{{ app_name }} -Dspring.profiles.active=PROD ;
+stopsignal=KILL                                 ;
+stderr_logfile=/var/log/supervisor/app.err      ;
+stdout_logfile=/var/log/supervisor/app.out      ;
+stdout_logfile_maxbytes=10MB                    ;
+stdout_logfile_backups=10                       ;
+user={{ app_install_user }}                     ;
+umask=022                                       ;
+autostart=true                                  ;
+autorestart=true                                ;
+startsecs=10                                    ;
+startretries=3                                  ;
+stopasgroup=true                                ;
+killasgroup=true                                ;
+redirect_stderr=false                           ;

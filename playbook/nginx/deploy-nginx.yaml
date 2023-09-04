@@ -1,0 +1,122 @@
+- name: 安装 Nginx
+  hosts: deploy
+  become: true
+  vars:
+    nginx_version: 1.24.0
+    nginx_home_dir: "nginx-{{ nginx_version }}"
+    nginx_source_tar_name: "{{ nginx_home_dir }}.tar.gz"
+    nginx_install_user: ecs-user
+  tasks:
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/{{ nginx_source_tar_name }}"
+        validate_certs: false
+        dest: "/tmp/{{ nginx_source_tar_name }}"
+        mode: "0644"
+        force: true
+        owner: "{{ nginx_install_user }}"
+        group: "{{ nginx_install_user }}"
+
+    - name: 解压源码
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ nginx_source_tar_name }}"
+        dest: "/usr/local/src/"
+        remote_src: true
+        owner: "{{ nginx_install_user }}"
+        group: "{{ nginx_install_user }}"
+      become_user: root
+
+    - name: 安装编译器
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - gcc
+        - libpcre2-dev
+        - libssl-dev
+      when: ansible_os_family == 'Debian'
+
+    - name: 安装编译器
+      ansible.builtin.yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - gcc
+        - gcc-c++
+        # - kernel-devel
+        - pcre-devel
+        - zlib-devel
+        - openssl-devel
+      when: ansible_os_family == 'RedHat'
+
+    - name: 编译源码
+      ansible.builtin.shell:
+        chdir: "/usr/local/src/{{ nginx_home_dir }}"
+        cmd: >
+          ./configure --prefix=/home/{{ nginx_install_user }}/{{ nginx_home_dir }} \
+            --user={{ nginx_install_user }} --group={{ nginx_install_user }} \
+            --with-http_ssl_module
+      changed_when: false
+
+    - name: Make
+      ansible.builtin.command:
+        chdir: "/usr/local/src/{{ nginx_home_dir }}"
+        cmd: make
+      changed_when: false
+
+    - name: Make Install
+      ansible.builtin.command:
+        chdir: "/usr/local/src/{{ nginx_home_dir }}"
+        cmd: make install
+      changed_when: false
+
+    - name: Config Permision
+      ansible.builtin.command: "chown -R {{ nginx_install_user }}:{{ nginx_install_user }} {{ item }}"
+      with_items:
+        - "/home/{{ nginx_install_user }}/{{ nginx_home_dir }}"
+      changed_when: false
+
+    - name: 普通用户开通 80 端口
+      ansible.builtin.command: setcap 'cap_net_bind_service=+ep' /home/{{ nginx_install_user }}/{{ nginx_home_dir }}/sbin/nginx
+      changed_when: false
+
+    - name: 复制启动文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/etc/supervisord.d/conf.d/{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - nginx-supervisord.ini
+
+    - name: 更新启动文件
+      ansible.builtin.command:
+        chdir: /tmp
+        cmd: /usr/bin/supervisorctl -c /etc/supervisord.d/supervisor.conf update
+      changed_when: false
+
+    - name: 重启
+      ansible.builtin.command:
+        chdir: /tmp
+        cmd: "/usr/bin/supervisorctl -u admin -p 123456 restart nginx"
+      changed_when: false
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: 80
+        state: started
+        delay: 1
+        timeout: 30
+
+    - name: 测试访问nginx
+      ansible.builtin.uri:
+        url: "http://127.0.0.1"
+        return_content: true
+        status_code: 200
+      register: curl_info
+
+    - name: 打印请求信息
+      ansible.builtin.debug:
+        var: curl_info.msg
+      changed_when: false

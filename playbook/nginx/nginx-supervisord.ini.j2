@@ -1,0 +1,17 @@
+[program:nginx]
+directory=/home/{{ nginx_install_user }}/{{ nginx_home_dir }}                     ;
+command=/home/{{ nginx_install_user }}/{{ nginx_home_dir }}/sbin/nginx -c /home/{{ nginx_install_user }}/{{ nginx_home_dir }}/conf/nginx.conf -g 'daemon off';
+stopsignal=KILL                             ;
+stderr_logfile=/var/log/supervisor/nginx.err ;
+stdout_logfile=/var/log/supervisor/nginx.out ;
+stdout_logfile_maxbytes=10MB                        ;
+stdout_logfile_backups=10                           ;
+user={{ nginx_install_user }}                       ;
+umask=022                                           ;
+autostart=true                                      ;
+autorestart=true                                    ;
+startsecs=10                                        ;
+startretries=3                                      ;
+stopasgroup=true                                    ;
+killasgroup=true                                    ;
+redirect_stderr=false                               ;

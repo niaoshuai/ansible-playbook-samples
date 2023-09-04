@@ -1,0 +1,18 @@
+[program:jenkins]
+environment=JAVA_HOME="{{ jenkins_java_home }}"           ;
+directory=/home/{{ jenkins_install_user }}               ;
+command={{ jenkins_java_home }}/bin/java -jar -Djenkins.install.runSetupWizard=false jenkins.war ;
+stopsignal=KILL                                           ;
+stderr_logfile=/var/log/supervisor/jenkins.err            ;
+stdout_logfile=/var/log/supervisor/jenkins.out            ;
+stdout_logfile_maxbytes=10MB                              ;
+stdout_logfile_backups=10                                 ;
+user={{ jenkins_install_user }}                           ;
+umask=022                                                 ;
+autostart=true                                            ;
+autorestart=true                                          ;
+startsecs=10                                              ;
+startretries=3                                            ;
+stopasgroup=true                                          ;
+killasgroup=true                                          ;
+redirect_stderr=false                                     ;

@@ -1,0 +1,72 @@
+# Task OpenJdk
+- name: 安装 OpenJdk
+  hosts: deploy
+  become: true
+  vars:
+    # openjdk 11
+    openjdk_version: "11.0.2"
+    openjdk_home_name: "jdk-{{ openjdk_version }}"
+    openjdk_tar_name: "openjdk-{{ openjdk_version }}_linux-x64_bin.tar.gz"
+    # openjdk 8
+    # openjdk_version: "8.382.05.1"
+    # openjdk_home_name: "amazon-corretto-{{ openjdk_version }}-linux-x64"
+    # openjdk_tar_name: "{{ openjdk_home_name }}.tar.gz"
+    openjdk_down_baseurl: "https://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com"
+    openjdk_install_user: ecs-user
+  tasks:
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "{{ openjdk_down_baseurl }}/{{ openjdk_tar_name }}"
+        validate_certs: false
+        dest: "/tmp/{{ openjdk_tar_name }}"
+        mode: "0644"
+        force: true
+        owner: "{{ openjdk_install_user }}"
+        group: "{{ openjdk_install_user }}"
+      tags: download
+
+    - name: 解压
+      ansible.builtin.unarchive:
+        remote_src: true
+        src: "/tmp/{{ openjdk_tar_name }}"
+        dest: "/home/{{ openjdk_install_user }}"
+        owner: "{{ openjdk_install_user }}"
+        group: "{{ openjdk_install_user }}"
+      become_user: "{{ openjdk_install_user }}"
+
+    - name: 创建环境变量目录
+      ansible.builtin.file:
+        name: "/home/{{ openjdk_install_user }}/.bashrc.d"
+        state: directory
+        mode: "0755"
+      become_user: "{{ openjdk_install_user }}"
+
+
+    - name: 配置环境变量文件 Java 8
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/home/{{ openjdk_install_user }}/.bashrc.d/{{ item }}"
+        mode: "0755"
+        force: true
+      with_items:
+        - java_env8.sh
+      become_user: "{{ openjdk_install_user }}"
+      when: openjdk_version is match('^8.*')
+
+    - name: 配置环境变量文件 Java 11
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/home/{{ openjdk_install_user }}/.bashrc.d/{{ item }}"
+        mode: "0755"
+        force: true
+      with_items:
+        - java_env11.sh
+      become_user: "{{ openjdk_install_user }}"
+      when: openjdk_version is match('^11.*')
+
+
+    # 配置 .bashrc 一下内容
+    #  for file in ~/.bashrc.d/*.sh; do
+    #      source "$file"
+    #  done
+    # source .bashrc

@@ -1,0 +1,57 @@
+# Task OpenJdk
+- name: 安装 GraalVM
+  hosts: deploy
+  become: true
+  vars:
+    #  17
+    graalvm_version: "17"
+    graalvm_home_name: "graalvm-jdk-17.0.8+9.1"
+    graalvm_tar_name: "graalvm-jdk-{{ graalvm_version }}_linux-x64_bin.tar.gz"
+    graalvm_down_baseurl: "https://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com"
+    graalvm_install_user: ecs-user
+  tasks:
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "{{ graalvm_down_baseurl }}/{{ graalvm_tar_name }}"
+        validate_certs: false
+        dest: "/tmp/{{ graalvm_tar_name }}"
+        mode: "0644"
+        force: true
+        owner: "{{ graalvm_install_user }}"
+        group: "{{ graalvm_install_user }}"
+      tags: download
+
+    - name: 解压
+      ansible.builtin.unarchive:
+        remote_src: true
+        src: "/tmp/{{ graalvm_tar_name }}"
+        dest: "/home/{{ graalvm_install_user }}"
+        owner: "{{ graalvm_install_user }}"
+        group: "{{ graalvm_install_user }}"
+      become_user: "{{ graalvm_install_user }}"
+
+    - name: 创建环境变量目录
+      ansible.builtin.file:
+        name: "/home/{{ graalvm_install_user }}/.bashrc.d"
+        state: directory
+        mode: "0755"
+      become_user: "{{ graalvm_install_user }}"
+
+
+    - name: 配置环境变量文件 17
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/home/{{ graalvm_install_user }}/.bashrc.d/{{ item }}"
+        mode: "0755"
+        force: true
+      with_items:
+        - graavm_17_env.sh
+      become_user: "{{ graalvm_install_user }}"
+      when: graalvm_version is match('^17.*')
+
+
+    # 配置 .bashrc 一下内容
+    #  for file in ~/.bashrc.d/*.sh; do
+    #      source "$file"
+    #  done
+    # source .bashrc

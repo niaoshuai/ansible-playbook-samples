@@ -1,0 +1,2 @@
+sudo yum -y install bison
+sudo ../configure  --prefix=/usr --disable-profile --enable-add-ons --with-headers=/usr/include --with-binutils=/usr/bin

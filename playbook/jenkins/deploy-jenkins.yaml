@@ -1,0 +1,73 @@
+- name: 安装 Jenkins
+  hosts: deploy
+  become: true
+  vars:
+    jenkins_version: 2.401.3
+    jenkins_home_name: "/home/"
+    jenkins_war_name: "jenkins.war"
+    jenkins_download_url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/jenkins/{{ jenkins_version }}/{{ jenkins_war_name }}"
+    jenkins_install_user: ecs-user
+    jenkins_java_home: "/home/{{ jenkins_install_user }}/jdk-11.0.2"
+  tasks:
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "{{ jenkins_download_url }}"
+        validate_certs: false
+        dest: "/home/{{ jenkins_install_user }}/{{ jenkins_war_name }}"
+        mode: "0644"
+        force: true
+        owner: "{{ jenkins_install_user }}"
+        group: "{{ jenkins_install_user }}"
+      tags: download
+
+    - name: 安装字体依赖包 1
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - fontconfig
+      when: ansible_os_family == 'Debian'
+
+    - name: 安装字体依赖包 2
+      ansible.builtin.yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - fontconfig
+      when: ansible_os_family == 'RedHat'
+
+    - name: 复制启动文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/etc/supervisord.d/conf.d/{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - jenkins-supervisord.ini
+
+    - name: 更新启动文件
+      ansible.builtin.command:
+        chdir: /tmp
+        cmd: /usr/bin/supervisorctl -c /etc/supervisord.d/supervisor.conf update
+      changed_when: false
+
+    - name: 重启0
+      ansible.builtin.command:
+        chdir: /tmp
+        cmd: "/usr/bin/supervisorctl -u admin -p 123456 stop jenkins"
+      changed_when: false
+
+    - name: 重启1
+      ansible.builtin.command:
+        chdir: /tmp
+        cmd: "/usr/bin/supervisorctl -u admin -p 123456 start jenkins"
+      changed_when: false
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: 8080
+        state: started
+        delay: 5
+        timeout: 120
+    # 密码在这里 cat /home/ecs-user/.jenkins/secrets/initialAdminPassword

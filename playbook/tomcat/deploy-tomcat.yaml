@@ -1,0 +1,64 @@
+- name: 安装 Tomcat
+  hosts: deploy
+  become: true
+  vars:
+    java_home: /home/ecs-user/jdk-11.0.2
+    tomcat_version: 10.1.13
+    tomcat_name_dir: "apache-tomcat-{{ tomcat_version }}"
+    tomcat_source_tar_name: "{{ tomcat_name_dir }}.tar.gz"
+    tomcat_install_user: ecs-user
+    tomcat_home_dir: "/home/{{ tomcat_install_user }}/{{ tomcat_name_dir }}"
+  tasks:
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/{{ tomcat_source_tar_name }}"
+        validate_certs: false
+        dest: "/tmp/{{ tomcat_source_tar_name }}"
+        mode: "0644"
+        force: true
+        owner: "{{ tomcat_install_user }}"
+        group: "{{ tomcat_install_user }}"
+
+    - name: 解压
+      ansible.builtin.unarchive:
+        remote_src: true
+        src: "/tmp/{{ tomcat_source_tar_name }}"
+        dest: "/home/{{ tomcat_install_user }}"
+        owner: "{{ tomcat_install_user }}"
+        group: "{{ tomcat_install_user }}"
+      become_user: "{{ tomcat_install_user }}"
+
+    - name: 复制启动文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/etc/supervisord.d/conf.d/{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - tomcat-supervisord.ini
+
+    - name: 更新启动文件
+      ansible.builtin.shell:
+        chdir: /tmp
+        cmd: /usr/bin/supervisorctl -c /etc/supervisord.d/supervisor.conf update
+      changed_when: false
+
+    # - name: 重启0
+    #   ansible.builtin.shell:
+    #     chdir: /tmp
+    #     cmd: "/usr/bin/supervisorctl -u admin -p 123456 stop jenkins"
+    #   changed_when: false
+
+    # - name: 重启1
+    #   ansible.builtin.shell:
+    #     chdir: /tmp
+    #     cmd: "/usr/bin/supervisorctl -u admin -p 123456 start jenkins"
+    #   changed_when: false
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: 8080
+        state: started
+        delay: 5
+        timeout: 120

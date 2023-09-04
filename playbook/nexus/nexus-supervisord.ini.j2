@@ -1,0 +1,18 @@
+[program:nexus]
+environment=JAVA_HOME="{{ java_home }}"                                     ;
+directory=/home/{{ nexus_install_user }}/{{ nexus_home_name }}                     ;
+command=/home/{{ nexus_install_user }}/{{ nexus_home_name }}/bin/nexus run ;
+stopsignal=KILL                             ;
+stderr_logfile=/var/log/supervisor/nexus.err ;
+stdout_logfile=/var/log/supervisor/nexus.out ;
+stdout_logfile_maxbytes=10MB                        ;
+stdout_logfile_backups=10                           ;
+user={{ nexus_install_user }}                       ;
+umask=022                                           ;
+autostart=true                                      ;
+autorestart=true                                    ;
+startsecs=10                                        ;
+startretries=3                                      ;
+stopasgroup=true                                    ;
+killasgroup=true                                    ;
+redirect_stderr=false                               ;

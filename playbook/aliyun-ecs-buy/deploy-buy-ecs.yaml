@@ -1,0 +1,79 @@
+# Task ECS
+- name: 安装 ECS
+  hosts: localhost
+  vars:
+    ecs_password: 'Ecs-user123'
+    release_time: '2023-09-04T16:59:00Z'
+    # 1核1G
+    instance_type: 'ecs.t5-lc1m1.small'
+    # 1核2G
+    # instance_type: 'ecs.t5-lc1m2.small'
+  tasks:
+    - name: 购买 ECS 实例
+      ansible.builtin.shell:
+        cmd: >
+           aliyun ecs RunInstances \
+            --region cn-hangzhou \
+            --RegionId 'cn-hangzhou' \
+            --ImageId 'centos_7_9_x64_20G_alibase_20230613.vhd' \
+            --VSwitchId 'vsw-bp1r3x5opt82hu0qmyoio' \
+            --SecurityGroupId 'sg-bp1fkhr9p673rn627c0r' \
+            --InternetMaxBandwidthIn 5 \
+            --InternetMaxBandwidthOut 5 \
+            --Password '{{ ecs_password }}' \
+            --InternetChargeType PayByTraffic \
+            --SystemDisk.Size 40 \
+            --SystemDisk.Category cloud_efficiency \
+            --AutoReleaseTime '{{ release_time }}' \
+            --SpotStrategy SpotAsPriceGo \
+            --InstanceChargeType PostPaid \
+            --CreditSpecification Standard \
+            --InstanceType '{{ instance_type }}' \
+            --AutoPay true \
+            --ImageOptions.LoginAsNonRoot true --version 2014-05-26 --force
+      changed_when: false
+      register: shell_result
+
+    - name: 提取JSON 信息
+      ansible.builtin.set_fact:
+        parsed_data: "{{ shell_result.stdout }}"
+
+    - name: 提取 ID
+      ansible.builtin.set_fact:
+        ecs_ids: "{{ parsed_data.InstanceIdSets.InstanceIdSet }}"
+
+    - name: 提取 ID 字符串
+      ansible.builtin.set_fact:
+        ecs_ids_str: "{{ ecs_ids | to_json }}"
+
+    - name: 打印 ID
+      ansible.builtin.debug:
+        var: ecs_ids_str
+
+    - name: 等待 30s (方便公网IP)
+      ansible.builtin.wait_for:
+        timeout: 30
+
+    - name: 查询 公网IP
+      ansible.builtin.shell:
+        cmd: >
+          aliyun ecs DescribeInstances \
+            --region cn-hangzhou \
+            --RegionId 'cn-hangzhou' \
+            --InstanceIds '{{ ecs_ids_str }}'
+      changed_when: false
+      register: shell_result1
+
+    - name: 提取JSON 信息1
+      ansible.builtin.set_fact:
+        parsed_data1: "{{ shell_result1.stdout }}"
+
+    - name: 提取 详细信息
+      ansible.builtin.set_fact:
+        ecs_details: "{{ parsed_data1.Instances.Instance }}"
+
+    - name: 打印 详细信息
+      ansible.builtin.debug:
+        var: ecs_details
+
+    # - name: TEST

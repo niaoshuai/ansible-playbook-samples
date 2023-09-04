@@ -1,0 +1,67 @@
+# Task Nexus
+- name: 安装 Nexus
+  hosts: deploy
+  become: true
+  vars:
+    java_home: '/home/ecs-user/amazon-corretto-8.382.05.1-linux-x64'
+    nexus_version: 8.0.34
+    nexus_home_name: "nexus-3.58.1-02"
+    nexus_tar_name: "{{ nexus_home_name }}-unix.tar.gz"
+    nexus_down_baseurl: "https://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com"
+    nexus_install_user: ecs-user
+  tasks:
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "{{ nexus_down_baseurl }}/{{ nexus_tar_name }}"
+        validate_certs: false
+        dest: "/tmp/{{ nexus_tar_name }}"
+        mode: "0644"
+        force: true
+        owner: "{{ nexus_install_user }}"
+        group: "{{ nexus_install_user }}"
+      tags: download
+
+    - name: 解压
+      ansible.builtin.unarchive:
+        remote_src: true
+        src: "/tmp/{{ nexus_tar_name }}"
+        dest: "/home/{{ nexus_install_user }}"
+        owner: "{{ nexus_install_user }}"
+        group: "{{ nexus_install_user }}"
+      become_user: "{{ nexus_install_user }}"
+
+    - name: 复制启动文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/etc/supervisord.d/conf.d/{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - nexus-supervisord.ini
+
+    - name: 更新启动文件
+      ansible.builtin.command:
+        chdir: /tmp
+        cmd: /usr/bin/supervisorctl -c /etc/supervisord.d/supervisor.conf update
+      changed_when: false
+
+    - name: 重启0
+      ansible.builtin.command:
+        chdir: /tmp
+        cmd: "/usr/bin/supervisorctl -u admin -p 123456 stop nexus"
+      changed_when: false
+
+    - name: 重启1
+      ansible.builtin.command:
+        chdir: /tmp
+        cmd: "/usr/bin/supervisorctl -u admin -p 123456 start nexus"
+      changed_when: false
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: 8081
+        state: started
+        delay: 5
+        timeout: 120
+    # 密码在这里 cat /home/ecs-user/sonatype-work/nexus3/admin.password

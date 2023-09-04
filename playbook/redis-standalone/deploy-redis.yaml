@@ -1,0 +1,98 @@
+- name: 安装 Nginx
+  hosts: deploy
+  become: true
+  vars:
+    redis_version: 7.2.0
+    redis_home_dir: "redis-{{ redis_version }}"
+    redis_source_tar_name: "{{ redis_home_dir }}.tar.gz"
+    redis_install_user: ecs-user
+    redis_log_dir: /home/{{ redis_install_user }}/{{ redis_home_dir }}/log
+    redis_data_dir: /home/{{ redis_install_user }}/{{ redis_home_dir }}/data
+  tasks:
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/{{ redis_source_tar_name }}"
+        validate_certs: false
+        dest: "/tmp/{{ redis_source_tar_name }}"
+        mode: "0644"
+        force: true
+        owner: "{{ redis_install_user }}"
+        group: "{{ redis_install_user }}"
+
+    - name: 解压源码
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ redis_source_tar_name }}"
+        dest: "/usr/local/src/"
+        remote_src: true
+        owner: "{{ redis_install_user }}"
+        group: "{{ redis_install_user }}"
+      become_user: root
+
+    - name: 安装编译器
+      ansible.builtin.package:
+        name: "{{ item }}"
+      with_items:
+        - gcc
+        - gcc-c++
+        # - kernel-devel
+
+    - name: 安装REDIS
+      ansible.builtin.shell:
+        chdir: "/usr/local/src/{{ redis_home_dir }}"
+        cmd: "{{ item }}"
+      with_items:
+        - make MALLOC=libc
+        - cd src
+        - make install PREFIX=/home/{{ redis_install_user }}/{{ redis_home_dir }}
+      become: true
+
+    - name: 创建 REDIS_HOME CONFIG DIR
+      file:
+        name: "{{ item }}"
+        state: directory
+        owner: "{{ redis_install_user }}"
+      with_items:
+        - "/home/{{ redis_install_user }}/{{ redis_home_dir }}"
+        - "/home/{{ redis_install_user }}/{{ redis_home_dir }}/conf"
+        - "{{ redis_log_dir }}"
+        - "{{ redis_data_dir }}"
+
+    - name: 更新配置文件
+      ansible.builtin.template:
+        src: "redis.conf.j2"
+        dest: "/home/{{ redis_install_user }}/{{ redis_home_dir }}/conf/redis.conf"
+
+    - name: Config Permision
+      ansible.builtin.command: "chown -R {{ redis_install_user }}:{{ redis_install_user }} {{ item }}"
+      with_items:
+        - "/home/{{ redis_install_user }}/{{ redis_home_dir }}"
+      changed_when: false
+
+    - name: 复制启动文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "/etc/supervisord.d/conf.d/{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - redis-supervisord.ini
+
+    - name: 更新启动文件
+      ansible.builtin.command:
+        chdir: /tmp
+        cmd: /usr/bin/supervisorctl -c /etc/supervisord.d/supervisor.conf update
+      changed_when: false
+
+    - name: 重启
+      ansible.builtin.command:
+        chdir: /tmp
+        cmd: "/usr/bin/supervisorctl -u admin -p 123456 restart redis"
+      changed_when: false
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: 6379
+        state: started
+        delay: 1
+        timeout: 30

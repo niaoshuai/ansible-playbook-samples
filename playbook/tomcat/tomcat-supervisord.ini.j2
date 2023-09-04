@@ -1,0 +1,18 @@
+[program:tomcat]
+environment=JAVA_HOME="{{ java_home }}"           ;
+directory={{ tomcat_home_dir }}                   ;
+command={{ tomcat_home_dir }}/bin/catalina.sh run ;
+stderr_logfile=/var/log/supervisor/tomcat.err     ;
+stdout_logfile=/var/log/supervisor/tomcat.out     ;
+stdout_logfile_maxbytes=10MB                      ;
+stdout_logfile_backups=10                         ;
+user={{ tomcat_install_user }}                    ;
+umask=022                                         ;
+autostart=true                                    ;
+autorestart=true                                  ;
+startsecs=10                                      ;
+startretries=3                                    ;
+stopasgroup=true                                  ;
+killasgroup=true                                  ;
+redirect_stderr=false                             ;
+stopsignal=KILL                                   ;

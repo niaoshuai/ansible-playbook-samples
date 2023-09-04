@@ -1,0 +1,56 @@
+---
+- name: 安装 Supervisor
+  hosts: deploy
+  become: true
+  tasks:
+    - name: 安装 Supervisor 包
+      ansible.builtin.apt:
+        name: supervisor
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: 安装 Supervisor 包
+      ansible.builtin.yum:
+        name: supervisor
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: 创建 CONF DIR
+      ansible.builtin.file:
+        name: "{{ item }}"
+        state: directory
+        mode: "0644"
+        owner: ecs-user
+        group: ecs-user
+      with_items:
+        - "/etc/supervisord.d/conf.d"
+        - "/var/log/supervisor"
+
+
+    - name: 配置 Supervisor 配置文件
+      ansible.builtin.copy:
+        src: supervisor.conf
+        dest: /etc/supervisord.d/supervisor.conf
+        mode: "0644"
+        owner: root
+
+    - name: 配置 supervisord systemctl 服务
+      ansible.builtin.copy:
+        src: supervisord.service
+        dest: /usr/lib/systemd/system/supervisord.service
+        mode: "0644"
+        owner: root
+
+    - name: 启用并启动 Supervisor 服务
+      ansible.builtin.service:
+        name: supervisord
+        state: restarted
+        enabled: true
+        daemon_reload: true
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: 9001
+        state: started
+        delay: 1
+        timeout: 30
