@@ -41,12 +41,10 @@
         group: root
       with_items:
         - "{{ minio_service_file }}"
+      notify: Reload Minio
 
-    - name: 更新启动文件
-      ansible.builtin.shell:
-        chdir: /tmp
-        cmd: /usr/bin/supervisorctl -c /etc/supervisord.d/supervisor.conf update
-      changed_when: false
+    - name: 立即执行 handler
+      ansible.builtin.meta: flush_handlers
 
     - name: 检查端口是否运行
       ansible.builtin.wait_for:
@@ -55,5 +53,13 @@
         delay: 1
         timeout: 30
       with_items:
-        - 9092
-        - 9090
+        - 9002
+        - 9000
+
+  handlers:
+    - name: "Reload Minio"
+      community.general.supervisorctl:
+        config: "/etc/supervisord.d/supervisor.conf"
+        name: "{{ minio_service_name }}"
+        state: started
+      changed_when: false

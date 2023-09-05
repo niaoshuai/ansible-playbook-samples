@@ -1,5 +1,5 @@
 [Unit]
-Description=Supervisor daemon
+Description=Supervisor Daemon
 
 [Service]
 Type=forking

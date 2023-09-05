@@ -1,7 +1,7 @@
----
 - name: 安装 Supervisor
   hosts: deploy
   become: true
+
   tasks:
     - name: 安装 Supervisor 包
       ansible.builtin.apt:
@@ -40,13 +40,11 @@
         dest: /usr/lib/systemd/system/supervisord.service
         mode: "0644"
         owner: root
+      notify:
+        - Reload Supervisord
 
-    - name: 启用并启动 Supervisor 服务
-      ansible.builtin.service:
-        name: supervisord
-        state: restarted
-        enabled: true
-        daemon_reload: true
+    - name: 立即执行 handler
+      ansible.builtin.meta: flush_handlers
 
     - name: 检查端口是否运行
       ansible.builtin.wait_for:
@@ -54,3 +52,11 @@
         state: started
         delay: 1
         timeout: 30
+
+  handlers:
+    - name: Reload Supervisord
+      ansible.builtin.service:
+        name: supervisord
+        state: restarted
+        enabled: true
+        daemon_reload: true
