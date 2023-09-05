@@ -1,0 +1,59 @@
+- name: "PlayBook For Minio"
+  hosts: deploy
+  become: true
+  vars:
+    minio_version: "0.0.0"
+    minio_name: "minio"
+    minio_install_user: "ecs-user"
+    minio_service_type: "supervisord"
+    minio_service_file: "minio-supervisord.ini"
+    minio_service_dir: "/etc/supervisord.d/conf.d/"
+    minio_service_name: "minio"
+    minio_data_dir: "/data/minio"
+    minio_admin_user: "admin"
+    minio_admin_password: "admin123456"
+    minio_service_port: ":9002"
+  tasks:
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "https://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/minio"
+        validate_certs: true
+        dest: "/home/{{ minio_install_user }}"
+        mode: "0755"
+        force: true
+        owner: "{{ minio_install_user }}"
+        group: "{{ minio_install_user }}"
+
+    - name: 创建 数据目录
+      ansible.builtin.file:
+        name: "{{ minio_data_dir }}"
+        state: directory
+        mode: "0755"
+        owner: "{{ minio_install_user }}"
+        group: "{{ minio_install_user }}"
+
+    - name: 复制启动文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ minio_service_dir }}{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - "{{ minio_service_file }}"
+
+    - name: 更新启动文件
+      ansible.builtin.shell:
+        chdir: /tmp
+        cmd: /usr/bin/supervisorctl -c /etc/supervisord.d/supervisor.conf update
+      changed_when: false
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: "{{ item }}"
+        state: started
+        delay: 1
+        timeout: 30
+      with_items:
+        - 9092
+        - 9090

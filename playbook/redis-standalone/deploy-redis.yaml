@@ -1,4 +1,4 @@
-- name: 安装 Nginx
+- name: 安装 Redis
   hosts: deploy
   become: true
   vars:
@@ -63,7 +63,7 @@
         dest: "/home/{{ redis_install_user }}/{{ redis_home_dir }}/conf/redis.conf"
 
     - name: Config Permision
-      ansible.builtin.command: "chown -R {{ redis_install_user }}:{{ redis_install_user }} {{ item }}"
+      ansible.builtin.shell: "chown -R {{ redis_install_user }}:{{ redis_install_user }} {{ item }}"
       with_items:
         - "/home/{{ redis_install_user }}/{{ redis_home_dir }}"
       changed_when: false
@@ -79,13 +79,13 @@
         - redis-supervisord.ini
 
     - name: 更新启动文件
-      ansible.builtin.command:
+      ansible.builtin.shell:
         chdir: /tmp
         cmd: /usr/bin/supervisorctl -c /etc/supervisord.d/supervisor.conf update
       changed_when: false
 
     - name: 重启
-      ansible.builtin.command:
+      ansible.builtin.shell:
         chdir: /tmp
         cmd: "/usr/bin/supervisorctl -u admin -p 123456 restart redis"
       changed_when: false
