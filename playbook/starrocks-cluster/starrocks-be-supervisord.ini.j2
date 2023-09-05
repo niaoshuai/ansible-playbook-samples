@@ -1,0 +1,17 @@
+[program:{{ starrocks_be_service_name }}]
+environment=JAVA_HOME="{{ java_home }}"                  ;
+directory={{ starrocks_home_dir }}                       ;
+command=bash {{ starrocks_home_dir }}/be/bin/start_be.sh ;
+stderr_logfile=/var/log/supervisor/starrocks-be.err      ;
+stdout_logfile=/var/log/supervisor/starrocks-be.log      ;
+stdout_logfile_maxbytes=15MB                             ;
+stdout_logfile_backups=10                                ;
+user={{ starrocks_install_user }}                        ;
+umask=022                                                ;
+autostart=true                                           ;
+autorestart=true                                         ;
+startsecs=10                                             ;
+startretries=3                                           ;
+stopasgroup=true                                         ;
+killasgroup=true                                         ;
+redirect_stderr=false                                    ;

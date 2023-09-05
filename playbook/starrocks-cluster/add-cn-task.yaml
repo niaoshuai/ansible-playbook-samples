@@ -1,0 +1,75 @@
+# - name: 下载压缩包
+#   ansible.builtin.get_url:
+#     url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/{{ starrocks_tar_name }}"
+#     validate_certs: false
+#     dest: "/tmp/{{ starrocks_tar_name }}"
+#     mode: "0755"
+#     force: true
+#     owner: "{{ starrocks_install_user }}"
+#     group: "{{ starrocks_install_user }}"
+
+- name: 创建目录
+  ansible.builtin.file:
+    name: "{{ item }}"
+    state: directory
+    mode: "0755"
+  become_user: "{{ starrocks_install_user }}"
+  with_items:
+    - "{{ starrocks_install_dir }}"
+
+# - name: 解压
+#   ansible.builtin.unarchive:
+#     remote_src: true
+#     src: "/tmp/{{ starrocks_tar_name }}"
+#     dest: "{{ starrocks_install_dir }}"
+#     owner: "{{ starrocks_install_user }}"
+#     group: "{{ starrocks_install_user }}"
+#   become_user: "{{ starrocks_install_user }}"
+
+- name: 复制启动文件
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ starrocks_service_dir }}/{{ item }}"
+    mode: "0755"
+    owner: root
+    group: root
+  with_items:
+    - "{{ starrocks_cn_service_file }}"
+  notify: Reload StarRocks CN
+
+- name: 立即执行 handler
+  ansible.builtin.meta: flush_handlers
+
+- name: 检查端口是否运行
+  ansible.builtin.wait_for:
+    port: "{{ item }}"
+    state: started
+    delay: 2
+    timeout: 30
+  with_items:
+    - "9060"
+    - "8040"
+    - "9050"
+    - "8060"
+
+- name: 执行扩容
+  ansible.builtin.shell:
+    cmd: >
+         /usr/bin/mysql -h 127.0.0.1 -P9030 -uroot -e "{{ item }}"
+  with_items:
+    - ALTER SYSTEM ADD COMPUTE NODE '{{ starrocks_add_cn_priority }}:9050'
+  changed_when: false
+  ignore_errors: true
+
+- name: 查询扩容结果
+  ansible.builtin.shell:
+    cmd: >
+         /usr/bin/mysql -h127.0.0.1 -P9030 -uroot -e "{{ item }}"
+  with_items:
+    - show compute nodes\G;
+  changed_when: false
+  register: print_result
+
+- name: 打印扩容结果
+  ansible.builtin.debug:
+    var: print_result.results[0].stdout_lines

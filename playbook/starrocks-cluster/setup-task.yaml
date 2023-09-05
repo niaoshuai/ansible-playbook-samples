@@ -1,0 +1,58 @@
+- name: 内存设置
+  ansible.builtin.shell: "{{ item }}"
+  ignore_errors: true
+  changed_when: false
+  with_items:
+    - echo 'performance' | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+    - echo 1 | sudo tee /proc/sys/vm/overcommit_memory
+    - echo 'madvise' | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
+    - eecho 0 | sudo tee /proc/sys/vm/swappiness
+
+# - name: 存储设置 TODO  (cat /sys/block/${disk}/queue/scheduler)
+
+- name: 网络配置
+  ansible.builtin.shell: "{{ item }}"
+  ignore_errors: true
+  changed_when: false
+  with_items:
+    - echo 1 | sudo tee /proc/sys/net/ipv4/tcp_abort_on_overflow
+    - echo 1024 | sudo tee /proc/sys/net/core/somaxconn
+
+- name: modify limits
+  ignore_errors: true
+  changed_when: false
+  lineinfile:
+    dest: "/etc/security/limits.conf"
+    line: "{{ item }}"
+  with_items:
+    - "* soft nproc 65535"
+    - "* hard nproc 65535"
+    - "* soft nofile 65535"
+    - "* hard nofile 65535"
+
+- name: SELinux
+  ansible.builtin.shell: "{{ item }}"
+  ignore_errors: true
+  changed_when: false
+  with_items:
+    - sed -i 's/SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
+    - sed -i 's/SELINUXTYPE/#SELINUXTYPE/' /etc/selinux/config
+    - setenforce 0
+
+- name: 时区同步
+  ansible.builtin.shell: "{{ item }}"
+  ignore_errors: true
+  changed_when: false
+  with_items:
+    - cp -f /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+# - name: NTP 同步
+
+- name: 高并发配置
+  ansible.builtin.shell: "{{ item }}"
+  ignore_errors: true
+  changed_when: false
+  with_items:
+    - echo 120000 > /proc/sys/kernel/threads-max
+    - echo 262144 > /proc/sys/vm/max_map_count
+    - echo 200000 > /proc/sys/kernel/pid_max
