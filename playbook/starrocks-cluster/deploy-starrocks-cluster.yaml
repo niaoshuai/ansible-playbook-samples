@@ -1,6 +1,6 @@
 - name: 安装 StarRocks
-  hosts: deploy
   become: true
+  hosts: "*"
   vars:
     java_home: "/data/service/jdk-11.0.2"
     starrocks_version: "3.1.2"
@@ -20,8 +20,10 @@
     starrocks_cn_service_file: "starrocks-cn-supervisord.ini"
     starrocks_cn_service_name: "starrocks-cn"
     # 扩容
-    starrocks_add_be_priority: "172.16.180.72"
-    starrocks_add_cn_priority: "172.16.180.72"
+    starrocks_fe_leader_priority: "172.16.180.73"
+    starrocks_add_fe_priority: "172.16.180.74"
+    starrocks_add_be_priority: "172.16.180.74"
+    starrocks_add_cn_priority: "172.16.180.73"
 
   handlers:
     - name: "Reload StarRocks FE"
@@ -45,25 +47,30 @@
   tasks:
     - name: 初始化
       ansible.builtin.import_tasks: "setup-task.yaml"
+      when: inventory_hostname in groups['starrocks-fe-leader']
       tags:
         - init
 
     - name: FE 节点初始化
       ansible.builtin.import_tasks: "init-cluster-task.yaml"
+      when: inventory_hostname in groups['starrocks-fe-leader']
       tags:
         - init
 
     - name: 扩容 BE
       ansible.builtin.import_tasks: "add-be-task.yaml"
+      when: inventory_hostname in groups['starrocks-be']
       tags:
         - add-be
 
     - name: 扩容 CN
       ansible.builtin.import_tasks: "add-cn-task.yaml"
+      when: inventory_hostname in groups['starrocks-cn']
       tags:
         - add-cn
 
     - name: 扩容 FE
       ansible.builtin.import_tasks: "add-fe-task.yaml"
+      when: inventory_hostname in groups['starrocks-fe']
       tags:
         - add-fe

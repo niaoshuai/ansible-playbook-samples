@@ -1,12 +1,12 @@
-# - name: 下载压缩包
-#   ansible.builtin.get_url:
-#     url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/{{ starrocks_tar_name }}"
-#     validate_certs: false
-#     dest: "/tmp/{{ starrocks_tar_name }}"
-#     mode: "0755"
-#     force: true
-#     owner: "{{ starrocks_install_user }}"
-#     group: "{{ starrocks_install_user }}"
+- name: 下载压缩包
+  ansible.builtin.get_url:
+    url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/{{ starrocks_tar_name }}"
+    validate_certs: false
+    dest: "/tmp/{{ starrocks_tar_name }}"
+    mode: "0755"
+    force: true
+    owner: "{{ starrocks_install_user }}"
+    group: "{{ starrocks_install_user }}"
 
 - name: 创建目录
   ansible.builtin.file:
@@ -17,14 +17,14 @@
   with_items:
     - "{{ starrocks_install_dir }}"
 
-# - name: 解压
-#   ansible.builtin.unarchive:
-#     remote_src: true
-#     src: "/tmp/{{ starrocks_tar_name }}"
-#     dest: "{{ starrocks_install_dir }}"
-#     owner: "{{ starrocks_install_user }}"
-#     group: "{{ starrocks_install_user }}"
-#   become_user: "{{ starrocks_install_user }}"
+- name: 解压
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: "/tmp/{{ starrocks_tar_name }}"
+    dest: "{{ starrocks_install_dir }}"
+    owner: "{{ starrocks_install_user }}"
+    group: "{{ starrocks_install_user }}"
+  become_user: "{{ starrocks_install_user }}"
 
 - name: 复制启动文件
   ansible.builtin.template:
@@ -55,7 +55,7 @@
 - name: 执行扩容
   ansible.builtin.shell:
     cmd: >
-         /usr/bin/mysql -h 127.0.0.1 -P9030 -uroot -e "{{ item }}"
+         /usr/bin/mysql -h{{ starrocks_fe_leader_priority }} -P9030 -uroot -e "{{ item }}"
   with_items:
     - ALTER SYSTEM ADD COMPUTE NODE '{{ starrocks_add_cn_priority }}:9050'
   changed_when: false
@@ -64,7 +64,7 @@
 - name: 查询扩容结果
   ansible.builtin.shell:
     cmd: >
-         /usr/bin/mysql -h127.0.0.1 -P9030 -uroot -e "{{ item }}"
+         /usr/bin/mysql -h{{ starrocks_fe_leader_priority }} -P9030 -uroot -e "{{ item }}"
   with_items:
     - show compute nodes\G;
   changed_when: false

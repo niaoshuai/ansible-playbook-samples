@@ -56,7 +56,7 @@
 - name: 执行扩容
   ansible.builtin.shell:
     cmd: >
-         /usr/bin/mysql -h 127.0.0.1 -P9030 -uroot -e "{{ item }}"
+         /usr/bin/mysql -h{{ starrocks_fe_leader_priority }} -P9030 -uroot -e "{{ item }}"
   with_items:
     - ALTER SYSTEM ADD BACKEND '{{ starrocks_add_be_priority }}:9050'
   changed_when: false
@@ -65,7 +65,7 @@
 - name: 查询扩容结果
   ansible.builtin.shell:
     cmd: >
-         /usr/bin/mysql -h127.0.0.1 -P9030 -uroot -e "{{ item }}"
+         /usr/bin/mysql -h{{ starrocks_fe_leader_priority }} -P9030 -uroot -e "{{ item }}"
   with_items:
     - show backends\G;
   changed_when: false
