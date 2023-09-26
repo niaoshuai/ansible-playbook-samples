@@ -1,0 +1,102 @@
+- name: Check directory
+  stat:
+    path: "{{ supervisord_conf_file }}"
+  register: dir_result
+
+- name: 下载压缩包01
+  ansible.builtin.get_url:
+    url: "{{ supervisor_download_url_01 }}"
+    validate_certs: false
+    dest: "/tmp/setuptools-11.3.1.tar.gz"
+    mode: "0755"
+    force: true
+    owner: "{{ supervisor_install_user }}"
+    group: "{{ supervisor_install_user }}"
+  with_items:
+    - "{{ supervisor_download_url }}"
+  when: not dir_result.stat.exists
+
+- name: 下载压缩包
+  ansible.builtin.get_url:
+    url: "{{ supervisor_download_url }}"
+    validate_certs: false
+    dest: "/tmp/{{ supervisor_tar_name }}"
+    mode: "0755"
+    force: true
+    owner: "{{ supervisor_install_user }}"
+    group: "{{ supervisor_install_user }}"
+  with_items:
+    - "{{ supervisor_download_url }}"
+  when: not dir_result.stat.exists
+
+- name:  创建 Python 源码目录
+  become: true
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ supervisor_install_user }}"
+    group: "{{ supervisor_install_user }}"
+  with_items:
+    - "{{ base_install_dir }}/pythonSrc"
+
+- name: 解压包
+  become: true
+  unarchive:
+    src: "/tmp/{{ item }}"
+    dest: "{{ base_install_dir }}/pythonSrc"
+    owner: "{{ supervisor_install_user }}"
+    group: "{{ supervisor_install_user }}"
+    remote_src: true
+  with_items:
+    - "setuptools-11.3.1.tar.gz"
+    - "{{ supervisor_tar_name }}"
+
+- name: Python Install
+  become: true
+  shell:
+    chdir: "{{ base_install_dir }}/pythonSrc/{{ item }}"
+    cmd: python setup.py install
+  with_items:
+    - "setuptools-11.3.1"
+    - "{{ supervisor_untar_dir_name }}"
+
+- name: 创建 CONF DIR
+  ansible.builtin.file:
+    name: "{{ item }}"
+    state: directory
+    mode: "0644"
+    owner: "{{ supervisor_install_user }}"
+    group: "{{ supervisor_install_user }}"
+  with_items:
+    - "{{ supervisord_conf_dir }}"
+    - "{{ supervisord_log_dir }}"
+
+- name: 配置 Supervisor 配置文件
+  ansible.builtin.template:
+    src: supervisor.conf.j2
+    dest: "{{ supervisord_conf_file }}"
+    mode: "0644"
+    owner: root
+  changed_when: true
+  notify:
+    - Reload Supervisord
+
+- name: 配置systemd supervisord
+  template: 
+    src: supervisord.service.j2
+    dest: /usr/lib/systemd/system/supervisord.service 
+    owner: root
+ 
+- name: 启动 supervisord 服务
+  systemd: name=supervisord enabled=yes daemon_reload=yes state=restarted
+  tags:
+    - restart
+
+- name: 检查端口是否运行
+  ansible.builtin.wait_for:
+    port: 9001
+    state: started
+    delay: 1
+    timeout: 30
+
+

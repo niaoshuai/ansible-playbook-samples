@@ -2,6 +2,8 @@
   hosts: deploy
   become: true
 
+  vars: 
+    supervisor_install_user: "ssdmp"
   tasks:
     - name: 安装 Supervisor 包
       ansible.builtin.apt:
@@ -20,8 +22,8 @@
         name: "{{ item }}"
         state: directory
         mode: "0644"
-        owner: ecs-user
-        group: ecs-user
+        owner: "{{ supervisor_install_user }}"
+        group: "{{ supervisor_install_user }}"
       with_items:
         - "/etc/supervisord.d/conf.d"
         - "/var/log/supervisor"

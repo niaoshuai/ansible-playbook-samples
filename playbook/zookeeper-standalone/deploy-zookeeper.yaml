@@ -1,0 +1,75 @@
+- name: 安装 Zookeeper
+  hosts: deploy
+  become: true
+  vars:
+    java_home: /data/service/jdk-11.0.2
+    zookeeper_version: 3.8.2
+    zookeeper_name_dir: "apache-zookeeper-{{ zookeeper_version }}-bin"
+    zookeeper_tar_name: "{{ zookeeper_name_dir }}.tar.gz"
+    zookeeper_install_user: ecs-user
+    zookeeper_home_dir: "/home/{{ zookeeper_install_user }}/{{ zookeeper_name_dir }}"
+    zookeeper_service_type: "supervisord"
+    zookeeper_service_name: "zookeeper"
+    supervisord_dir: "/etc/supervisord.d/conf.d"
+    supervisord_conf: "/etc/supervisord.d/supervisor.conf"
+    supervisord_log_dir: "/var/log/supervisor"
+  handlers:
+    - name: "Reload Zookeeper"
+      community.general.supervisorctl:
+        config: "{{ supervisord_conf }}"
+        name: "{{ zookeeper_service_name }}"
+        state: restarted
+      changed_when: false
+  tasks:
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/{{ zookeeper_tar_name }}"
+        validate_certs: false
+        dest: "/tmp/{{ zookeeper_tar_name }}"
+        mode: "0644"
+        force: true
+        owner: "{{ zookeeper_install_user }}"
+        group: "{{ zookeeper_install_user }}"
+
+    - name: 解压
+      ansible.builtin.unarchive:
+        remote_src: true
+        src: "/tmp/{{ zookeeper_tar_name }}"
+        dest: "/home/{{ zookeeper_install_user }}"
+        owner: "{{ zookeeper_install_user }}"
+        group: "{{ zookeeper_install_user }}"
+      become_user: "{{ zookeeper_install_user }}"
+
+    - name: 复制配置文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ zookeeper_home_dir }}/conf/{{ item }}"
+        mode: "0644"
+        owner: "{{ zookeeper_install_user }}"
+        group: "{{ zookeeper_install_user }}"
+      with_items:
+        - zoo.cfg
+      notify: Reload Zookeeper
+      changed_when: true
+
+    - name: 复制启动文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ supervisord_dir }}/{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - zookeeper-supervisord.ini
+      notify: Reload Zookeeper
+      changed_when: true
+
+    - name: 立即执行 handler
+      ansible.builtin.meta: flush_handlers
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: 2181
+        state: started
+        delay: 5
+        timeout: 120

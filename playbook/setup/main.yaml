@@ -1,0 +1,32 @@
+- name: 安装 StarRocks
+  become: true
+  hosts: "*"
+  handlers:
+    - name: Reload Supervisord
+      ansible.builtin.service:
+        name: supervisord
+        state: restarted
+        enabled: true
+        daemon_reload: true
+    - name: "Reload Prometheus Host"
+      community.general.supervisorctl:
+        config: "{{ supervisord_conf_file }}"
+        name: "{{ host_exporter_service_name }}"
+        state: restarted
+      changed_when: false
+  tasks:
+    - name: 创建软件安装目录
+      ansible.builtin.import_tasks: "init.yaml"
+      tags:
+        - install
+
+    - name: 安装主机服务管理组件
+      ansible.builtin.import_tasks: "deploy-supervisor.yaml"
+      tags:
+        - install
+        - supervisor
+
+    - name: 安装主机监控
+      ansible.builtin.import_tasks: "deploy-host-exporter.yaml"
+      tags:
+        - install

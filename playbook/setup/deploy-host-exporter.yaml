@@ -1,0 +1,47 @@
+- name: Check directory
+  stat:
+    path: "/tmp/{{ host_exporter_tar_name }}"
+  register: dir_result
+
+- name: 下载压缩包
+  ansible.builtin.get_url:
+    url: "{{ host_exporter_download_url }}"
+    validate_certs: false
+    dest: "/tmp/{{ host_exporter_tar_name }}"
+    mode: "0755"
+    force: true
+    owner: "{{ supervisor_install_user }}"
+    group: "{{ supervisor_install_user }}"
+  when: not dir_result.stat.exists
+
+- name: 解压包
+  unarchive:
+    src: "/tmp/{{ item }}"
+    dest: "{{ base_install_dir }}"
+    owner: "{{ supervisor_install_user }}"
+    group: "{{ supervisor_install_user }}"
+    remote_src: true
+  with_items:
+    - "{{ host_exporter_tar_name }}"
+
+- name: 复制启动文件
+  template:
+    src: "supervisord/{{ item }}.j2"
+    dest: "{{ supervisord_conf_dir }}/{{ item }}"
+    owner: "{{ host_exporter_install_user }}"
+    group: "{{ host_exporter_install_user }}"
+  with_items:
+    - prometheus-host_exporter.ini
+  changed_when: true
+  notify:
+    - Reload Prometheus Host
+
+- name: 立即执行 handler
+  ansible.builtin.meta: flush_handlers
+
+- name: 检查端口是否运行
+  wait_for:
+    port: 9100
+    state: started
+    delay: 1
+    timeout: 30

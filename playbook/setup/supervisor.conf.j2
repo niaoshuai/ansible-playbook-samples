@@ -1,0 +1,32 @@
+[inet_http_server]
+port = :9001
+username = admin
+password = 123456
+
+[include]
+files ={{ supervisord_conf_dir }}/*.ini
+
+[supervisord]
+logfile = {{ supervisord_log_dir }}/supervisord.log
+logfile_maxbytes = 50MB
+logfile_backups=10
+loglevel = info
+pidfile = /var/run/supervisord.pid
+nodaemon = false
+minfds = 65535
+#minprocs = 200
+umask = 022
+user = root
+identifier = supervisor
+nocleanup = true
+childlogdir = /tmp
+strip_ansi = false
+
+[supervisorctl]
+serverurl = http://127.0.0.1:9001
+username = admin
+password = 123456
+prompt = supervisor
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface

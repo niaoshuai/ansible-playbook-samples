@@ -3,13 +3,13 @@
   hosts: localhost
   vars:
     ecs_password: 'Ecs-user123'
-    release_time: '2023-09-05T16:59:00Z'
+    release_time: '2023-09-08T16:59:00Z'
     # 1核1G
-    # instance_type: 'ecs.t5-lc1m1.small'
+    instance_type: 'ecs.t5-lc1m1.small'
     # 1核2G
     # instance_type: 'ecs.t5-lc1m2.small'
     # 2核8G
-    instance_type: 'ecs.g5.large'
+    # instance_type: 'ecs.g5.large'
   tasks:
     - name: 购买 ECS 实例
       ansible.builtin.shell:
@@ -39,6 +39,10 @@
     - name: 提取JSON 信息
       ansible.builtin.set_fact:
         parsed_data: "{{ shell_result.stdout }}"
+    
+    - name: 打印 详细信息
+      ansible.builtin.debug:
+        var: parsed_data
 
     - name: 提取 ID
       ansible.builtin.set_fact:

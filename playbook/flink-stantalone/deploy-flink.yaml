@@ -1,0 +1,49 @@
+# Task OpenJdk
+- name: 安装 GraalVM
+  hosts: deploy
+  become: true
+  vars:
+    #  flink 1.17.1
+    java_home: "/opt/ssdmp/amazon-corretto-8.362.08.1-linux-x64"
+    flink_version: "1.17.1"
+    flink_tar_name: "flink-{{ flink_tar_name }}.tar.gz"
+    flink_untar_dir: "flink-{{ flink_version }}"
+    flink_home_dir: "/opt/ssdmp/{{ flink_untar_dir }}"
+    flink_service_type: "supervisord"
+    flink_service_name: "flink-standalone"
+    flink_install_user: ssdmp
+    supervisord_dir: "/etc/supervisord.d/conf.d"
+    supervisord_conf: "/etc/supervisord.d/supervisor.conf"
+    supervisord_log_dir: "/var/log/supervisor"
+
+  handlers:
+    - name: "Reload Flink"
+      community.general.supervisorctl:
+        config: "{{ supervisord_conf }}"
+        name: "{{ flink_service_name }}"
+        state: restarted
+      changed_when: false
+
+  tasks:
+    - name: 复制启动文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ supervisord_dir }}/{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - flink-standalone-supervisord.ini
+      notify: Reload Flink
+      changed_when: true
+
+    - name: 立即执行 handler
+      ansible.builtin.meta: flush_handlers
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: 2181
+        state: started
+        delay: 5
+        timeout: 120
+ 

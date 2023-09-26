@@ -1,0 +1,78 @@
+# Task OpenJdk
+- name: 安装 GraalVM
+  hosts: deploy
+  become: true
+  vars:
+    #  naocs 2.2.3
+    java_home: "/data/service/jdk-11.0.2"
+    nacos_version: "2.2.3"
+    nacos_tar_name: "nacos-server-{{nacos_version }}.tar.gz"
+    nacos_untar_dir: "nacos"
+    nacos_home_dir: "/data/service/{{ nacos_untar_dir }}"
+    nacos_service_type: "supervisord"
+    nacos_service_name: "nacos-standalone"
+    nacos_install_user: ecs-user
+    supervisord_dir: "/etc/supervisord.d/conf.d"
+    supervisord_conf: "/etc/supervisord.d/supervisor.conf"
+    supervisord_log_dir: "/var/log/supervisor"
+
+  handlers:
+    - name: "Reload Nacos"
+      community.general.supervisorctl:
+        config: "{{ supervisord_conf }}"
+        name: "{{ nacos_service_name }}"
+        state: restarted
+      changed_when: false
+
+  tasks:
+
+    - name: 下载 Linux 通用包
+      ansible.builtin.get_url:
+        url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/{{ nacos_tar_name }}"
+        validate_certs: false
+        dest: "/tmp/{{ nacos_tar_name }}"
+        mode: "0755"
+        force: true
+        owner: "{{ nacos_install_user }}"
+        group: "{{ nacos_install_user }}"
+
+    - name: 解压 Linux 通用包
+      ansible.builtin.unarchive:
+        src: /tmp/{{ nacos_tar_name }}
+        dest: /home/ecs-user
+        remote_src: true
+        owner: "{{ nacos_install_user }}"
+        group: "{{ nacos_install_user }}"
+
+    - name: Copy BIN
+      copy:
+        src: "startup-daemon.sh"
+        dest: "{{ nacos_home_dir }}/nacos/bin/startup-daemon.sh"
+        owner: "{{ nacos_install_user }}"
+        group: "{{ nacos_install_user }}"
+        mode: 'u+x'
+        force: yes
+      become: true
+
+    - name: 复制启动文件
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ supervisord_dir }}/{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      with_items:
+        - nacos-standalone-supervisord.ini
+      notify: Reload Nacos
+      changed_when: true
+
+    - name: 立即执行 handler
+      ansible.builtin.meta: flush_handlers
+
+    - name: 检查端口是否运行
+      ansible.builtin.wait_for:
+        port: 8848
+        state: started
+        delay: 5
+        timeout: 120
+ 

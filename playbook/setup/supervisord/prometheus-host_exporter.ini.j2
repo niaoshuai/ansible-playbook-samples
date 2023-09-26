@@ -1,0 +1,17 @@
+[program:{{ host_exporter_service_name }}]
+directory={{ host_exporter_home_dir }}                                    ;
+command={{ host_exporter_home_dir }}/node_exporter                             ;
+stopsignal=KILL                                                                ;
+stderr_logfile={{ supervisord_log_dir }}/{{ host_exporter_service_name }}.err ;
+stdout_logfile={{ supervisord_log_dir }}/{{ host_exporter_service_name }}.out ;
+stdout_logfile_maxbytes=10MB                                                   ;
+stdout_logfile_backups=10                                                      ;
+user={{ host_exporter_install_user }}                                          ;
+umask=022                                                                      ;
+autostart=true                                                                 ;
+autorestart=true                                                               ;
+startsecs=10                                                                   ;
+startretries=3                                                                 ;
+stopasgroup=true                                                               ;
+killasgroup=true                                                               ;
+redirect_stderr=false                                                          ;

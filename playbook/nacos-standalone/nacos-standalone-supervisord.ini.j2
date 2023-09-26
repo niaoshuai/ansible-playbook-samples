@@ -1,0 +1,18 @@
+[program:{{ nacos_service_name }}]
+environment=JAVA_HOME="{{ java_home }}"                                                          ;
+directory=/home/{{ nacos_install_user }}/{{ nacos_home_name }}                                   ;
+command=/home/{{ nacos_install_user }}/{{ nacos_home_name }}/bin/startup-daemon.sh -m standalone ;
+stopsignal=KILL                                                                                  ;
+stderr_logfile=/var/log/supervisor/{{ nacos_service_name }}.err                                  ;
+stdout_logfile=/var/log/supervisor/{{ nacos_service_name }}.out                                  ;
+stdout_logfile_maxbytes=10MB                                                                     ;
+stdout_logfile_backups=10                                                                        ;
+user={{ nacos_install_user }}                                                                    ;
+umask=022                                                                                        ;
+autostart=true                                                                                   ;
+autorestart=true                                                                                 ;
+startsecs=10                                                                                     ;
+startretries=3                                                                                   ;
+stopasgroup=true                                                                                 ;
+killasgroup=true                                                                                 ;
+redirect_stderr=false                                                                            ;

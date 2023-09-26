@@ -1,0 +1,20 @@
+base_install_dir: "/opt/ssdmp"
+base_install_user: "ssdmp"
+base_install_password: "Ssdmp#123"
+
+supervisor_install_user: ssdmp
+supervisor_version: "4.2.5"
+supervisor_tar_name: "supervisor-{{ supervisor_version }}.tar.gz"
+supervisor_untar_dir_name: "supervisor-{{ supervisor_version }}"
+supervisor_download_url_01: "http://192.168.1.169:9900/bdm/setuptools-11.3.1.tar.gz"
+supervisor_download_url: "http://192.168.1.169:9900/bdm/{{ supervisor_tar_name }}"
+supervisord_conf_dir: "/etc/supervisord.d/conf.d"
+supervisord_conf_file: "/etc/supervisord.d/supervisord.conf"
+supervisord_log_dir: "/var/log/supervisor"
+
+host_exporter_install_user: "ssdmp"
+host_exporter_version: "1.6.1"
+host_exporter_tar_name: "node_exporter-{{ host_exporter_version }}.linux-amd64.tar.gz"
+host_exporter_download_url: "http://192.168.1.169:9900/bdm/{{ host_exporter_tar_name }}"
+host_exporter_service_name: "host_exporter"
+host_exporter_home_dir: "/opt/ssdmp/node_exporter-{{ host_exporter_version }}.linux-amd64"
