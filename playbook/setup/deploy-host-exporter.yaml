@@ -1,4 +1,4 @@
-- name: Check directory
+- name: Check Directory
   stat:
     path: "/tmp/{{ host_exporter_tar_name }}"
   register: dir_result

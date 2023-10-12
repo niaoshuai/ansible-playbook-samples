@@ -1,4 +1,4 @@
-- name: 安装 StarRocks
+- name: 主机初始化
   become: true
   hosts: "*"
   handlers:

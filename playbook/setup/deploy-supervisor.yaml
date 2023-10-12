@@ -1,4 +1,4 @@
-- name: Check directory
+- name: Check Directory
   stat:
     path: "{{ supervisord_conf_file }}"
   register: dir_result
@@ -29,7 +29,7 @@
     - "{{ supervisor_download_url }}"
   when: not dir_result.stat.exists
 
-- name:  创建 Python 源码目录
+- name: 创建Python源码目录
   become: true
   file:
     path: "{{ item }}"
@@ -82,11 +82,11 @@
     - Reload Supervisord
 
 - name: 配置systemd supervisord
-  template: 
+  template:
     src: supervisord.service.j2
-    dest: /usr/lib/systemd/system/supervisord.service 
+    dest: "/usr/lib/systemd/system/supervisord.service"
     owner: root
- 
+
 - name: 启动 supervisord 服务
   systemd: name=supervisord enabled=yes daemon_reload=yes state=restarted
   tags:
@@ -98,5 +98,3 @@
     state: started
     delay: 1
     timeout: 30
-
-

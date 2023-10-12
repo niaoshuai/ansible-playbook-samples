@@ -1,3 +1,4 @@
 .vscode
 inventory-private
 playbook-cluster
+ansible.log

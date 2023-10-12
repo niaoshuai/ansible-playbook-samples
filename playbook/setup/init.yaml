@@ -1,26 +1,21 @@
-#创建安装运行用户，并加入sudo
+# 创建安装运行用户，并加入sudo
+
 - name: create user
   user:
     name: "{{ base_install_user }}"
     password: "{{ base_install_password | password_hash('sha512') }}"
-    createhome: yes
+    createhome: true
     state: present
     shell: "/bin/bash"
-  become: true
-  become_user: root
 
 - name: Config /etc/sudoers
   lineinfile: dest=/etc/sudoers state=present line='{{ item }}'  validate='visudo -cf %s'
   with_items:
     - "{{ base_install_user }} ALL=(ALL)  ALL "
     - "Defaults: {{ base_install_user }} !requiretty"
-  become: true
-  become_user: root
 
-
-- name: 创建环境变量目录
+- name: 创建软件安装目录
   ansible.builtin.file:
     name: "{{ base_install_dir }}"
     state: directory
     mode: "0755"
-  become_user: "{{ base_install_user }}"
