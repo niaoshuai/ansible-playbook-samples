@@ -1,0 +1,124 @@
+
+- name: 安装 MySQL 依赖包
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - libaio
+  when: ansible_os_family == 'Debian'
+
+- name: 安装 MySQL 依赖包
+  ansible.builtin.yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - libaio
+  when: ansible_os_family == 'RedHat'
+
+- name: RM DATA
+  ansible.builtin.command:
+    cmd: rm -rf "{{ mysql_data_dir }}"
+  changed_when: false
+
+- name: 创建 MySQL DATA & LOG
+  ansible.builtin.file:
+    name: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ mysql_install_user }}"
+    group: "{{ mysql_install_user }}"
+  with_items:
+    - "{{ mysql_data_dir }}/logs/mysql"
+    - "{{ mysql_data_dir }}/logs/supervisor"
+    - "{{ mysql_data_dir }}/etc"
+    - "{{ mysql_data_dir }}/data"
+
+- name: 之前遗留的创建配置目录
+  ansible.builtin.file:
+    name: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  with_items:
+    - "/etc/supervisord.d/conf.d"
+
+- name: 复制MySQL配置文件(忽略大小写)
+  ansible.builtin.template:
+    src: "my01.cnf.j2"
+    dest: "{{ mysql_data_dir }}/etc/my.cnf"
+    mode: "0755"
+    owner: "{{ mysql_install_user }}"
+    group: "{{ mysql_install_user }}"
+
+- name: 数据库初始化 8.0.33(忽略大小写)
+  ansible.builtin.shell:
+    chdir: "{{ mysql_install_dir }}/{{ mysql_home_dir_name }}/bin"
+    cmd: >
+      ./mysqld --initialize --lower-case-table-names=1 --console \
+          --user={{ mysql_install_user }} --basedir={{ mysql_install_dir }}/{{ mysql_home_dir_name }} --datadir={{ mysql_data_dir }}/data
+  register: mysql_initialize_output
+  changed_when: false
+
+- name: Extract the temporary password
+  ansible.builtin.set_fact:
+    temp_password: "{{ mysql_initialize_output.stderr_lines[-1] | regex_search('temporary password(.*): \\s*(.*)', '\\2') }}"
+
+- name: Print the password
+  ansible.builtin.debug:
+    var: temp_password
+
+- name: 复制启动文件
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/supervisord.d/conf.d/{{ item }}"
+    mode: "0755"
+    owner: root
+    group: root
+  with_items:
+    - mysql-supervisord.ini
+  changed_when: true
+  notify: 重启MySQL
+
+- name: 立即执行 handler
+  ansible.builtin.meta: flush_handlers
+
+- name: 检查端口是否运行
+  ansible.builtin.wait_for:
+    port: 3306
+    state: started
+    delay: 1
+    timeout: 30
+
+- name: 重置密码
+  ansible.builtin.shell:
+    chdir: "{{ mysql_install_dir }}/{{ mysql_home_dir_name }}"
+    cmd: ./bin/mysql -uroot -S /tmp/mysqlx.sock -p'{{ temp_password[0] }}' -e "{{ item }}" --connect-expired-password
+  with_items:
+    - ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mysql_root_password }}';
+  changed_when: false
+  become_user: "{{ mysql_install_user }}"
+
+- name: 设置root访问权限
+  ansible.builtin.shell:
+    chdir: "{{ mysql_install_dir }}/{{ mysql_home_dir_name }}"
+    cmd: ./bin/mysql -uroot -S /tmp/mysqlx.sock -p'{{ mysql_root_password }}' -e "{{ item }}"
+  with_items:
+    - CREATE USER 'root'@'%' IDENTIFIED BY '{{ mysql_root_password }}';
+    - GRANT ALL PRIVILEGES ON *.* TO 'root'@'%'  WITH GRANT OPTION;
+    - FLUSH PRIVILEGES;
+  no_log: true
+  changed_when: false
+
+
+- name: 测试mysql服务
+  ansible.builtin.command:
+    chdir: "{{ mysql_install_dir }}/{{ mysql_home_dir_name }}"
+    cmd: ./bin/mysql -uroot -S /tmp/mysqlx.sock -p'{{ mysql_root_password }}' -e "select version();"
+  register: mysql_info
+  changed_when: false
+
+- name: 打印mysql版本
+  ansible.builtin.debug:
+    var: mysql_info.stdout_lines
+  changed_when: false

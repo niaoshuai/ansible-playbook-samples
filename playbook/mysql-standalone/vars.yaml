@@ -1,0 +1,11 @@
+  mysql_version: 8.0.34
+  mysql_home_dir_name: "mysql-8.0.34-linux-glibc2.12-x86_64"
+  mysql_install_dir: "/opt/ssdmp"
+  mysql_install_user: "ssdmp"
+  mysql_tar_name: "{{ mysql_home_dir_name }}.tar.xz"
+  mysql_down_base_url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/"
+  mysql_root_password: MySQL#123456
+  mysql_service_name: MySQL
+  # 忽略大小写
+  mysql_ignore_table_name: "Y"
+  mysql_data_dir: /data/mysql

@@ -1,12 +1,12 @@
-[program:MySQL]
-directory=/home/ecs-user/{{ mysql_home_name }}                                                  ;
-command=/home/ecs-user/{{ mysql_home_name }}/bin/mysqld --defaults-file=/home/ecs-user/{{ mysql_home_name }}/etc/my.cnf ;
+[program:{{ mysql_service_name }}]
+directory={{ mysql_install_dir }}/{{ mysql_home_dir_name }}                                                  ;
+command={{ mysql_install_dir }}/{{ mysql_home_dir_name }}/bin/mysqld --defaults-file={{ mysql_data_dir }}/etc/my.cnf ;
 stopsignal=KILL                                                             ;
-stderr_logfile=/home/ecs-user/logs/supervisor/supervisor-mysql.err                                ;
-stdout_logfile=/home/ecs-user/logs/supervisor/supervisor-mysql.out                                ;
+stderr_logfile=/var/log/supervisor/supervisor-mysql.err                                ;
+stdout_logfile=/var/log/supervisor/supervisor-mysql.out                                ;
 stdout_logfile_maxbytes=10MB                                                ;
 stdout_logfile_backups=10                                                   ;
-user=ecs-user                                          ;
+user={{ mysql_install_user }}                                          ;
 umask=022                                                                   ;
 autostart=true                                                              ;
 autorestart=true                                                            ;
