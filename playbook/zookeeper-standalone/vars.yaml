@@ -1,0 +1,11 @@
+java_home: /data/service/jdk-11.0.2
+zookeeper_version: 3.8.2
+zookeeper_name_dir: "apache-zookeeper-{{ zookeeper_version }}-bin"
+zookeeper_tar_name: "{{ zookeeper_name_dir }}.tar.gz"
+zookeeper_install_user: ecs-user
+zookeeper_install_dir: "/home/{{ zookeeper_install_user }}"
+zookeeper_service_type: "supervisord"
+zookeeper_service_name: "zookeeper"
+supervisord_dir: "/etc/supervisord.d/conf.d"
+supervisord_conf: "/etc/supervisord.d/supervisor.conf"
+supervisord_log_dir: "/var/log/supervisor"

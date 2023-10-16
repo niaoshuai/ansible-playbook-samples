@@ -1,9 +1,9 @@
 [program:{{ zookeeper_service_name }}]
 environment=JAVA_HOME="{{ java_home }}"                  ;
-directory={{ zookeeper_home_dir }}                       ;
-command=bash {{ zookeeper_home_dir }}/bin/zkServer.sh start-foreground ;
-stderr_logfile={{ supervisord_log_dir }}/starrocks-be.err      ;
-stdout_logfile={{ supervisord_log_dir }}/starrocks-be.log      ;
+directory={{ zookeeper_install_dir }}/{{ zookeeper_name_dir }}                     ;
+command=bash {{ zookeeper_install_dir }}/{{ zookeeper_name_dir }}/bin/zkServer.sh start-foreground ;
+stderr_logfile={{ supervisord_log_dir }}/{{ zookeeper_service_name }}.err      ;
+stdout_logfile={{ supervisord_log_dir }}/{{ zookeeper_service_name }}.log      ;
 stdout_logfile_maxbytes=15MB                             ;
 stdout_logfile_backups=10                                ;
 user={{ zookeeper_install_user }}                        ;

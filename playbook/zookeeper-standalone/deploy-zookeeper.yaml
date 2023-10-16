@@ -1,18 +1,6 @@
 - name: 安装 Zookeeper
-  hosts: deploy
+  hosts: '*'
   become: true
-  vars:
-    java_home: /data/service/jdk-11.0.2
-    zookeeper_version: 3.8.2
-    zookeeper_name_dir: "apache-zookeeper-{{ zookeeper_version }}-bin"
-    zookeeper_tar_name: "{{ zookeeper_name_dir }}.tar.gz"
-    zookeeper_install_user: ecs-user
-    zookeeper_home_dir: "/home/{{ zookeeper_install_user }}/{{ zookeeper_name_dir }}"
-    zookeeper_service_type: "supervisord"
-    zookeeper_service_name: "zookeeper"
-    supervisord_dir: "/etc/supervisord.d/conf.d"
-    supervisord_conf: "/etc/supervisord.d/supervisor.conf"
-    supervisord_log_dir: "/var/log/supervisor"
   handlers:
     - name: "Reload Zookeeper"
       community.general.supervisorctl:
@@ -23,7 +11,7 @@
   tasks:
     - name: 下载 Linux 通用包
       ansible.builtin.get_url:
-        url: "http://i-ansible.oss-cn-hangzhou-internal.aliyuncs.com/{{ zookeeper_tar_name }}"
+        url: "{{ zookeeper_download_base_url }}{{ zookeeper_tar_name }}"
         validate_certs: false
         dest: "/tmp/{{ zookeeper_tar_name }}"
         mode: "0644"
@@ -35,7 +23,7 @@
       ansible.builtin.unarchive:
         remote_src: true
         src: "/tmp/{{ zookeeper_tar_name }}"
-        dest: "/home/{{ zookeeper_install_user }}"
+        dest: "{{ zookeeper_install_dir }}"
         owner: "{{ zookeeper_install_user }}"
         group: "{{ zookeeper_install_user }}"
       become_user: "{{ zookeeper_install_user }}"
@@ -43,7 +31,7 @@
     - name: 复制配置文件
       ansible.builtin.template:
         src: "{{ item }}.j2"
-        dest: "{{ zookeeper_home_dir }}/conf/{{ item }}"
+        dest: "{{ zookeeper_install_dir }}/{{ zookeeper_name_dir }}/conf/{{ item }}"
         mode: "0644"
         owner: "{{ zookeeper_install_user }}"
         group: "{{ zookeeper_install_user }}"
